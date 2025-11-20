@@ -6,30 +6,30 @@
     <link rel="stylesheet" href="./style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Required Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.7.1/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
 </head>
 
 <body>
-    <div id="container"></div>
+
+    <canvas id="bgCanvas"></canvas>
 
     <div class="input-container">
         <div class="input-wrapper">
             <input type="text" id="morphText" placeholder="Type something..." maxlength="20">
             <button id="typeBtn">
-                <span class="button-content">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M5 12H19M19 12L12 5M19 12L12 19" />
-                    </svg>
-                    <span>Create</span>
-                </span>
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12H19M19 12L12 5M19 12L12 19"/>
+                </svg>
+                <span>Create</span>
             </button>
         </div>
     </div>
 
     <script src="./script.js"></script>
+
 </body>
 </html>
