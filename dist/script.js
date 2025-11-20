@@ -1,93 +1,117 @@
-let container = document.getElementById("container");
-
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 160;
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const canvas = document.getElementById("bgCanvas");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
-container.appendChild(renderer.domElement);
 
-const particles = 15000;
-const geometry = new THREE.BufferGeometry();
-let positions = new Float32Array(particles * 3);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 60;
 
-for (let i = 0; i < particles * 3; i += 3) {
-    let x = (Math.random() - 0.5) * 300;
-    let y = (Math.random() - 0.5) * 300;
-    let z = (Math.random() - 0.5) * 300;
-    positions[i] = x;
-    positions[i + 1] = y;
-    positions[i + 2] = z;
+let particles, particlePositions = [];
+const particleCount = 12000;
+
+function createSpherePoints() {
+    const positions = [];
+    const radius = 20;
+
+    for (let i = 0; i < particleCount; i++) {
+        const theta = Math.random() * 2 * Math.PI;
+        const phi = Math.acos((Math.random() * 2) - 1);
+
+        const x = radius * Math.sin(phi) * Math.cos(theta);
+        const y = radius * Math.sin(phi) * Math.sin(theta);
+        const z = radius * Math.cos(phi);
+
+        positions.push(new THREE.Vector3(x, y, z));
+    }
+    return positions;
 }
 
-geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+particlePositions = createSpherePoints();
+
+const geometry = new THREE.BufferGeometry();
+const positionsArray = new Float32Array(particleCount * 3);
+
+for (let i = 0; i < particleCount; i++) {
+    positionsArray[i * 3 + 0] = particlePositions[i].x;
+    positionsArray[i * 3 + 1] = particlePositions[i].y;
+    positionsArray[i * 3 + 2] = particlePositions[i].z;
+}
+
+geometry.setAttribute("position", new THREE.BufferAttribute(positionsArray, 3));
 
 const material = new THREE.PointsMaterial({
-    size: 1.5,
-    color: "#8d86ff",
+    color: 0x7a6fff,
+    size: 0.12,
 });
 
-const points = new THREE.Points(geometry, material);
-scene.add(points);
+particles = new THREE.Points(geometry, material);
+scene.add(particles);
 
-let targetPositions = positions.slice();
+// TEXT → PARTICLE TARGETS
+function textToParticles(str) {
+    const canvasText = document.createElement("canvas");
+    const ctx = canvasText.getContext("2d");
 
-function textToPoints(text) {
-    let canvas = document.createElement("canvas");
-    let ctx = canvas.getContext("2d");
-    canvas.width = 600;
-    canvas.height = 300;
+    canvasText.width = 600;
+    canvasText.height = 250;
 
     ctx.fillStyle = "white";
-    ctx.font = "200px Inter";
-    ctx.fillText(text, 50, 200);
+    ctx.font = "180px Inter";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(str, 300, 120);
 
-    let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const imgData = ctx.getImageData(0, 0, 600, 250).data;
+    const points = [];
 
-    let pts = [];
-    for (let y = 0; y < canvas.height; y += 4) {
-        for (let x = 0; x < canvas.width; x += 4) {
-            let index = (y * canvas.width + x) * 4;
-            if (imgData[index + 3] > 128) pts.push({ x, y });
+    for (let y = 0; y < 250; y += 3) {
+        for (let x = 0; x < 600; x += 3) {
+            const index = (y * 600 + x) * 4;
+            if (imgData[index + 3] > 200) {
+                const vx = (x - 300) / 10;
+                const vy = (120 - y) / 10;
+                const vz = 0;
+                points.push(new THREE.Vector3(vx, vy, vz));
+            }
         }
     }
 
-    return pts;
+    return points;
 }
 
-function morph(text) {
-    let pts = textToPoints(text);
-    let newPos = positions.slice();
+document.getElementById("typeBtn").addEventListener("click", () => {
+    const text = document.getElementById("morphText").value.trim();
+    if (!text) return;
 
-    for (let i = 0; i < particles; i++) {
-        let p = pts[i % pts.length];
-        newPos[i * 3] = p.x - 150;
-        newPos[i * 3 + 1] = 150 - p.y;
-    }
+    const targetPoints = textToParticles(text);
 
-    targetPositions = newPos;
-}
+    const posAttr = particles.geometry.attributes.position;
+
+    gsap.to({}, {
+        duration: 1.8,
+        onUpdate: () => {
+            for (let i = 0; i < particleCount; i++) {
+                const target = targetPoints[i % targetPoints.length];
+                posAttr.array[i * 3 + 0] += (target.x - posAttr.array[i * 3 + 0]) * 0.06;
+                posAttr.array[i * 3 + 1] += (target.y - posAttr.array[i * 3 + 1]) * 0.06;
+                posAttr.array[i * 3 + 2] += (target.z - posAttr.array[i * 3 + 2]) * 0.06;
+            }
+            posAttr.needsUpdate = true;
+        }
+    });
+});
 
 function animate() {
     requestAnimationFrame(animate);
-
-    let pos = geometry.attributes.position.array;
-    for (let i = 0; i < pos.length; i++) {
-        pos[i] += (targetPositions[i] - pos[i]) * 0.04;
-    }
-
-    geometry.attributes.position.needsUpdate = true;
-
-    points.rotation.y += 0.002;
+    particles.rotation.y += 0.0015;
     renderer.render(scene, camera);
 }
 
 animate();
 
-document.getElementById("typeBtn").addEventListener("click", () => {
-    let txt = document.getElementById("morphText").value.trim();
-    if (txt.length === 0) return;
-    morph(txt);
+window.addEventListener("resize", () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
 });
